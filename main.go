@@ -21,6 +21,15 @@ type Recipe struct {
 	PublishedAt  time.Time `json:"publishedAt"`
 }
 
+func findRecipeIndex(id string) int {
+	for index := 0; index < len(recipes); index++ {
+		if recipes[index].ID == id {
+			return index
+		}
+	}
+	return -1
+}
+
 func _NewRecipeHandler(c *gin.Context) {
 	var recipe Recipe;
 	if err := c.BindJSON(&recipe); err != nil {
@@ -49,13 +58,7 @@ func _UpdateRecipeHandler(c *gin.Context) {
 		return
 	}
 
-	index := -1
-	for i:=0; i<len(recipes); i++ {
-		if recipes[i].ID == id {
-			index = i;
-			break;
-		}
-	}
+	index := findRecipeIndex(id)
 
 	if index == -1 {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -70,6 +73,22 @@ func _UpdateRecipeHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, recipe)
 }
 
+func _DeleteRecipeHandler(c *gin.Context) {
+	id := c.Param("id")
+	index := findRecipeIndex(id)
+
+	if index == -1 {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Recipe Not Found",
+		})
+		return
+	}
+
+	recipe := recipes[index]
+	recipes = append(recipes[:index], recipes[index+1:]...)
+	c.JSON(http.StatusOK, recipe)
+}
+
 func main() {
 	gin.DisableConsoleColor()
 	// initApp()
@@ -79,6 +98,7 @@ func main() {
 	router.GET("/recipes", _ListRecipesHandler)
 	router.POST("/recipes", _NewRecipeHandler)
 	router.PUT("/recipe/:id", _UpdateRecipeHandler)
+	router.DELETE("/recipe/:id", _DeleteRecipeHandler)
 	router.Run(":8080")
 }
 
