@@ -33,15 +33,17 @@ func _NewRecipeHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, recipe)
 }
 
+func _ListRecipesHandler(c *gin.Context) {
+	c.JSON(http.StatusOK, recipes)
+}
+
 func main() {
 	gin.DisableConsoleColor()
 	// initApp()
 
 	// router with logger and crash free middleware
 	router := gin.Default()
-	router.GET("/recipes", func (c *gin.Context) {
-		c.JSON(200, gin.H{"a": "b"})
-	})
+	router.GET("/recipes", _ListRecipesHandler)
 	router.POST("/recipes", _NewRecipeHandler)
 	router.Run(":8080")
 }
