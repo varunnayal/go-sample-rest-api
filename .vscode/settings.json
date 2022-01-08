@@ -1,0 +1,17 @@
+{
+  "go.gopath": "/Users/varunnayal/.gvm/pkgsets/go1.17.6/global",
+  "go.goroot": "/Users/varunnayal/.gvm/gos/go1.17.6",
+  // "gopls": {
+  //   "formatting.gofumpt": true,
+  // },
+  // "go.lintOnSave": "file",
+  // "go.formatTool": "goimports",
+  // // "go.useLanguageServer": true,
+  // "[go]": {
+  //   "editor.formatOnSave": true,
+  //   "editor.defaultFormatter": "golang.go",
+  //   "editor.codeActionsOnSave": {
+  //     "source.organizeImports": true
+  //   }
+  // },
+}
