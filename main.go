@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -89,6 +90,23 @@ func _DeleteRecipeHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, recipe)
 }
 
+func _SearchRecipeHandler(c *gin.Context) {
+	tag := c.Query("tag")
+
+	filteredRecipes := make([]Recipe, 0)
+
+	for i := 0; i < len(recipes); i++ {
+		for _, t := range recipes[i].Tags {
+			if strings.EqualFold(t, tag) {
+				filteredRecipes = append(filteredRecipes, recipes[i])
+				break;
+			}
+		}
+	}
+
+	c.JSON(http.StatusOK, filteredRecipes)
+}
+
 func main() {
 	gin.DisableConsoleColor()
 	// initApp()
@@ -96,6 +114,7 @@ func main() {
 	// router with logger and crash free middleware
 	router := gin.Default()
 	router.GET("/recipes", _ListRecipesHandler)
+	router.GET("/recipes/search", _SearchRecipeHandler)
 	router.POST("/recipes", _NewRecipeHandler)
 	router.PUT("/recipe/:id", _UpdateRecipeHandler)
 	router.DELETE("/recipe/:id", _DeleteRecipeHandler)
