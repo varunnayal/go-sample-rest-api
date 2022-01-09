@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/rs/xid"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
@@ -24,35 +24,46 @@ var client *mongo.Client
 var collection *mongo.Collection
 var recipes []Recipe
 
+// Recipe structure
 type Recipe struct {
-	ID           string    `json:"id"`
-	Name         string    `json:"name"`
-	Tags         []string  `json:"tags"`
-	Ingredients  []string  `json:"ingredients"`
-	Instructions []string  `json:"instructions"`
-	PublishedAt  time.Time `json:"publishedAt"`
+	// swagger:ignore
+	ID           primitive.ObjectID `json:"id" bson:"_id"`
+	Name         string             `json:"name" bson:"name"`
+	Tags         []string           `json:"tags" bson:"tags"`
+	Ingredients  []string           `json:"ingredients" bson:"ingredients"`
+	Instructions []string           `json:"instructions" bson:"instructions"`
+	// swagger:ignore
+	PublishedAt  time.Time          `json:"publishedAt" bson:"publishedAt"`
 }
 
 func findRecipeIndex(id string) int {
-	for index := 0; index < len(recipes); index++ {
-		if recipes[index].ID == id {
-			return index
-		}
-	}
+	// for index := 0; index < len(recipes); index++ {
+	// 	if recipes[index].ID == id {
+	// 		return index
+	// 	}
+	// }
 	return -1
 }
 
 func _NewRecipeHandler(c *gin.Context) {
-	var recipe Recipe;
-	if err := c.BindJSON(&recipe); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H {
+	var recipe Recipe
+	if err := c.ShouldBindJSON(&recipe); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
 			"error": err.Error(),
 		})
 		return
 	}
-	recipe.ID = xid.New().String()
+
+	recipe.ID = primitive.NewObjectID()
 	recipe.PublishedAt = time.Now()
-	recipes = append(recipes, recipe)
+
+	if _, err := collection.InsertOne(ctx, recipe); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Error adding new recipe",
+			"reason": err.Error(),
+		})
+		return
+	}
 	c.JSON(http.StatusOK, recipe)
 }
 
@@ -125,7 +136,7 @@ func _SearchRecipeHandler(c *gin.Context) {
 		for _, t := range recipes[i].Tags {
 			if strings.EqualFold(t, tag) {
 				filteredRecipes = append(filteredRecipes, recipes[i])
-				break;
+				break
 			}
 		}
 	}
@@ -149,12 +160,11 @@ func main() {
 
 func _loadFromJSON(recipes []Recipe) {
 	var recipeList []interface{}
-	for _, 	recipe := range recipes {
+	for _, recipe := range recipes {
 		recipeList = append(recipeList, recipe)
 	}
 
-
-	insertManyResult, err := collection.InsertMany(context.TODO(), recipeList);
+	insertManyResult, err := collection.InsertMany(context.TODO(), recipeList)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -196,8 +206,6 @@ func init() {
 	client = _connectMongo()
 	collection = client.Database(os.Getenv("MONGO_DB")).Collection("recipes")
 
-
 	// _loadFromJSON(recipes)
 	_countDocuments()
 }
-
