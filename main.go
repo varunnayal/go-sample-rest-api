@@ -1,16 +1,27 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"io/ioutil"
+	"log"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/xid"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/mongo/readpref"
 )
 
+var ctx context.Context
+var err error
+var client *mongo.Client
+var collection *mongo.Collection
 var recipes []Recipe
 
 type Recipe struct {
@@ -121,9 +132,57 @@ func main() {
 	router.Run(":8080")
 }
 
+func _loadFromJSON(recipes []Recipe) {
+	var recipeList []interface{}
+	for _, 	recipe := range recipes {
+		recipeList = append(recipeList, recipe)
+	}
+
+
+	insertManyResult, err := collection.InsertMany(context.TODO(), recipeList);
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Println("Added recipes: ", len(insertManyResult.InsertedIDs))
+}
+
+func _countDocuments() {
+	n, err := collection.CountDocuments(ctx, bson.D{})
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Println("Available recipes: ", n)
+
+}
+
+func _connectMongo() *mongo.Client {
+	ctx = context.Background()
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(os.Getenv("MONGO_URI")))
+
+	for true {
+		if err = client.Ping(context.TODO(), readpref.Primary()); err != nil {
+			log.Println("<<<<<<<<<< ERROR >>>>>>>>>>>>")
+			log.Println(err)
+			time.Sleep(5 * time.Duration(time.Second))
+			// log.Fatal(err)
+		} else {
+			log.Println("Connected to MongoDB")
+			break
+		}
+	}
+	return client
+}
+
 func init() {
 	recipes = make([]Recipe, 0)
 	file, _ := ioutil.ReadFile("recipes.json")
 	_ = json.Unmarshal(file, &recipes)
+
+	client = _connectMongo()
+	collection = client.Database(os.Getenv("MONGO_DB")).Collection("recipes")
+
+
+	// _loadFromJSON(recipes)
+	_countDocuments()
 }
 
