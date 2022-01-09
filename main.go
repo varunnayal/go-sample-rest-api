@@ -36,6 +36,7 @@ func main() {
 		var r *gin.RouterGroup
 		r = v1.Group("/recipe")
 		{
+			r.GET("/:id", recipesHandler.GetRecipeByID)
 			r.PUT("/:id", recipesHandler.UpdateRecipeHandler)
 			r.DELETE("/:id", recipesHandler.DeleteRecipeHandler)
 		}
