@@ -25,6 +25,7 @@ var collection *mongo.Collection
 var recipes []Recipe
 
 // Recipe structure
+// swagger:parameters recipes newRecipe
 type Recipe struct {
 	// swagger:ignore
 	ID           primitive.ObjectID `json:"id" bson:"_id"`
@@ -122,19 +123,28 @@ func _UpdateRecipeHandler(c *gin.Context) {
 }
 
 func _DeleteRecipeHandler(c *gin.Context) {
-	id := c.Param("id")
-	index := findRecipeIndex(id)
-
-	if index == -1 {
+	recipeID, err := primitive.ObjectIDFromHex(c.Param("id"))
+	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Recipe Not Found",
+			"error": "Invalid id",
 		})
 		return
 	}
 
-	recipe := recipes[index]
-	recipes = append(recipes[:index], recipes[index+1:]...)
-	c.JSON(http.StatusOK, recipe)
+	delResult, err := collection.DeleteOne(ctx, bson.M{"_id": recipeID})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H {
+			"error": err.Error(),
+		})
+		return
+	}
+	if delResult.DeletedCount == 0 {
+		c.JSON(http.StatusNotFound, gin.H {
+			"error": "Invalid id",
+		})
+		return
+	}
+	c.JSON(http.StatusOK, delResult)
 }
 
 func _SearchRecipeHandler(c *gin.Context) {
