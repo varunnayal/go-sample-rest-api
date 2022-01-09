@@ -33,7 +33,7 @@ type Recipe struct {
 	Ingredients  []string           `json:"ingredients" bson:"ingredients"`
 	Instructions []string           `json:"instructions" bson:"instructions"`
 	// swagger:ignore
-	PublishedAt  time.Time          `json:"publishedAt" bson:"publishedAt"`
+	PublishedAt time.Time `json:"publishedAt" bson:"publishedAt"`
 }
 
 func findRecipeIndex(id string) int {
@@ -96,19 +96,29 @@ func _UpdateRecipeHandler(c *gin.Context) {
 		return
 	}
 
-	index := findRecipeIndex(id)
-
-	if index == -1 {
+	objectID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Recipe Not Found",
+			"error": "Invalid id",
+			"reason": err.Error(),
 		})
 		return
 	}
+	updateRes, err := collection.UpdateOne(ctx, bson.M{"_id": objectID}, bson.D{
+		{"$set", bson.D{
+			{"name", recipe.Name},
+			{"tags", recipe.Tags},
+			{"ingredients", recipe.Ingredients},
+			{"instructions", recipe.Instructions},
+		}},
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error in updating", "reason": err.Error()})
+		return
+	}
 
-	recipe.ID = recipes[index].ID
-	recipe.PublishedAt = recipes[index].PublishedAt
-	recipes[index] = recipe
-	c.JSON(http.StatusOK, recipe)
+	log.Println("Update Result: ", updateRes)
+	c.JSON(http.StatusOK, updateRes)
 }
 
 func _DeleteRecipeHandler(c *gin.Context) {
@@ -161,6 +171,7 @@ func main() {
 func _loadFromJSON(recipes []Recipe) {
 	var recipeList []interface{}
 	for _, recipe := range recipes {
+		recipe.ID = primitive.NewObjectID()
 		recipeList = append(recipeList, recipe)
 	}
 
