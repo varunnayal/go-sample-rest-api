@@ -20,11 +20,35 @@ type RecipesHandler struct {
 	ctx        context.Context
 }
 
+// NewRecipeHandler create new structure
 func NewRecipeHandler(ctx context.Context, collection *mongo.Collection) *RecipesHandler {
 	return &RecipesHandler{
 		collection: collection,
 		ctx:        ctx,
 	}
+}
+
+// GetRecipeByID handler
+func (handler *RecipesHandler) GetRecipeByID(c *gin.Context) {
+	objectID, err := primitive.ObjectIDFromHex(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "invalid id",
+		})
+		return
+	}
+
+	var recipe models.Recipe
+	err = handler.collection.FindOne(handler.ctx, bson.M{"_id": objectID}).Decode(&recipe)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": "Unable to find data",
+			"reason":  err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, recipe)
 }
 
 // NewRecipeHandler handler
