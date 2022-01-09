@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -12,6 +13,7 @@ import (
 	"recipes-api/models"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-redis/redis"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -22,6 +24,7 @@ import (
 var ctx context.Context
 var client *mongo.Client
 var collection *mongo.Collection
+var redisClient *redis.Client
 var recipesHandler *handlers.RecipesHandler
 
 func main() {
@@ -97,11 +100,32 @@ func _connectMongo() *mongo.Client {
 	return client
 }
 
+func _connectRedis() *redis.Client {
+	redisOpts := &redis.Options{
+		Addr: os.Getenv("REDIS_ADDR"),
+		Password: os.Getenv("REDIS_PWD"),
+		DB: 0,
+	}
+	redisClient := redis.NewClient(redisOpts)
+
+	log.Println("redisClient = ", redisClient)
+
+	pingRes, err := redisClient.Ping().Result()
+	if err != nil {
+		log.Println("Redis Error: ", err)
+	} else {
+		fmt.Println("Redis ping -> ", pingRes)
+	}
+	return redisClient
+}
+
 func init() {
+	// TODO parallel connection mongo and redis
 	client = _connectMongo()
+	redisClient = _connectRedis()
 	collection = client.Database(os.Getenv("MONGO_DB")).Collection("recipes")
 
-	recipesHandler = handlers.NewRecipeHandler(ctx, collection)
+	recipesHandler = handlers.NewRecipeHandler(ctx, collection, redisClient)
 	// _loadFromJSON(recipes)
 	_countDocuments()
 }
