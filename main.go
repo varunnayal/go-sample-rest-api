@@ -32,7 +32,9 @@ func main() {
 	// initApp()
 
 	// router with logger and crash free middleware
-	router := gin.Default()
+	// router := gin.Default()
+	router := gin.New()
+	router.Use(gin.Logger())
 
 	v1 := router.Group("/v1")
 	{
@@ -87,7 +89,7 @@ func _connectMongo() *mongo.Client {
 	var err error
 
 	for true {
-		client, err = mongo.Connect(ctx, options.Client().ApplyURI(os.Getenv("MONGO_URI")))
+		client, err = mongo.Connect(ctx, options.Client().ApplyURI(os.Getenv("MONGO_URI")).SetMaxPoolSize(100).SetAppName("gin-recipe-app"))
 		if err = client.Ping(context.TODO(), readpref.Primary()); err != nil {
 			log.Println("<<<<<<<<<< ERROR >>>>>>>>>>>>")
 			log.Println(err)
@@ -102,9 +104,9 @@ func _connectMongo() *mongo.Client {
 
 func _connectRedis() *redis.Client {
 	redisOpts := &redis.Options{
-		Addr: os.Getenv("REDIS_ADDR"),
+		Addr:     os.Getenv("REDIS_ADDR"),
 		Password: os.Getenv("REDIS_PWD"),
-		DB: 0,
+		DB:       0,
 	}
 	redisClient := redis.NewClient(redisOpts)
 
