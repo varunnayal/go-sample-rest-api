@@ -1,5 +1,9 @@
 package main
 
+// concurrency!
+// - gorouting
+// - channels waitGroups
+
 import (
 	"context"
 	"encoding/json"

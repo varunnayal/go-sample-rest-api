@@ -43,10 +43,32 @@ func (handler *RecipesHandler) GetRecipeByID(c *gin.Context) {
 	}
 
 	var recipe models.Recipe
+	cacheRecipe, err := handler.redisClient.Get("002-recipe-app:recipebyid" + objectID.Hex()).Result();
+	if err != nil && err != redis.Nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": err.Error(),
+		})
+		return
+	} else if err == nil {
+		json.Unmarshal([]byte(cacheRecipe), &recipe)
+		c.JSON(http.StatusOK, recipe)
+		return
+	}
+
+
 	err = handler.collection.FindOne(handler.ctx, bson.M{"_id": objectID}).Decode(&recipe)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message": "Unable to find data",
+			"reason":  err.Error(),
+		})
+		return
+	}
+
+	byteCache, _ := json.Marshal(recipe)
+	if _, err := handler.redisClient.Set("002-recipe-app:recipebyid" + objectID.Hex(), string(byteCache), 5 * time.Minute).Result(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": "Unable to save data in cache",
 			"reason":  err.Error(),
 		})
 		return
